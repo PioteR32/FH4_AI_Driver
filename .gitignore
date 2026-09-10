@@ -216,3 +216,50 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ==========================================
+# Edytory (Podstawowe ignorowanie)
+# ==========================================
+.vscode/
+.idea/
+*.swp
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Budowanie i pakiety
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Logi i bazy danych
+*.log
+*.sqlite3
+*.db
+
+# ==========================================
+# Pliki systemowe (Windows, macOS, Linux)
+# ==========================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+
+# ==========================================
+# PyTorch & Machine Learning Models (.pth)
+# ==========================================
+# Pliki wag i punktów kontrolnych PyTorch
+*.pth
+*.pt
+*.ckpt
+
+# Inne ciężkie formaty używane z PyTorch
+*.bin
+*.onnx
+*.safetensors
+*.h5
+*.parquet
+*.npy
+*.npz

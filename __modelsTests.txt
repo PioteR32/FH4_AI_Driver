@@ -1,0 +1,18 @@
+
+{'loss': 0.5545731207338409, 'accuracy': 0.8948339483394834, 'model_name': 'model_200E32BLR0_000011.pth'}
+{'loss': 0.4881918336937044, 'accuracy': 0.9202857413189517, 'model_name': 'model_200E32BLR0_0000110.pth'}
+{'loss': 0.4934775868566612, 'accuracy': 0.9862806320370896, 'model_name': 'model_200E32BLR0_0000111.pth'}
+{'loss': 0.5033181902024342, 'accuracy': 0.8331441006717759, 'model_name': 'model_200E32BLR0_0000112.pth'}
+{'loss': 0.4898171033028205, 'accuracy': 0.9333427949664111, 'model_name': 'model_200E32BLR0_0000113.pth'}
+{'loss': 0.47589662165501473, 'accuracy': 0.877566467972372, 'model_name': 'model_200E32BLR0_0000114.pth'}
+{'loss': 0.48787786232194585, 'accuracy': 0.8498911912196045, 'model_name': 'model_200E32BLR0_0000115.pth'}
+{'loss': 0.47980533574227296, 'accuracy': 0.878654555776327, 'model_name': 'model_200E32BLR0_0000116.pth'}
+{'loss': 0.4927468382880234, 'accuracy': 0.8545746995931498, 'model_name': 'model_200E32BLR0_0000117.pth'}
+{'loss': 0.4931214361274713, 'accuracy': 0.889866590973602, 'model_name': 'model_200E32BLR0_000012.pth'}
+{'loss': 0.4878503088807189, 'accuracy': 0.8252436370517552, 'model_name': 'model_200E32BLR0_000013.pth'}
+{'loss': 0.4839853100772612, 'accuracy': 0.8555681710663261, 'model_name': 'model_200E32BLR0_000014.pth'}
+{'loss': 0.47076495962208814, 'accuracy': 0.9101617939256316, 'model_name': 'model_200E32BLR0_000015.pth'}
+{'loss': 0.48560258211797636, 'accuracy': 0.8149304569968776, 'model_name': 'model_200E32BLR0_000016.pth'}
+{'loss': 0.47370514836754835, 'accuracy': 0.8956381871511023, 'model_name': 'model_200E32BLR0_000017.pth'}
+{'loss': 0.4825952179396499, 'accuracy': 0.8621440060554452, 'model_name': 'model_200E32BLR0_000018.pth'}
+{'loss': 0.4849269361682754, 'accuracy': 0.8999905383669221, 'model_name': 'model_200E32BLR0_000019.pth'}
