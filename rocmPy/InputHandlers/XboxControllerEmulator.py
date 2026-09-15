@@ -77,7 +77,7 @@ class XboxControllerEmulator:
             return False
             
         try:
-            self.gamepad.left_joystick(int(x*32767), y)
+            self.gamepad.left_joystick(int(x*32766), y)
             self.gamepad.update()
             return True
         except Exception as e:

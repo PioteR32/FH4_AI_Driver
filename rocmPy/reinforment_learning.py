@@ -13,7 +13,9 @@ def evaluate_model_in_FH4(
     device: torch.device,
 ) -> dict:
 
-    model.eval()  # Set model to evaluation mode
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.000001)
+    criterion = torch.nn.CrossEntropyLoss()
+    model.train()  # Set model to training mode
     listner = fh4Statistic.FH4TelemetryListener()
     controller = XboxControllerEmulator()
     device = torch.device('cuda')
@@ -65,58 +67,65 @@ def evaluate_model_in_FH4(
             input_tensor.copy_(gpu_processed)
             speeds.append(listner.get_speed_from_telemetry())
     print("Pętla gotowa na 3 kanały (BGR)...")
-    with torch.no_grad():
-        while not  keyboard.is_pressed("p"):
-            pass
-        while not keyboard.is_pressed("q"):
-            img_np = camera.get_latest_frame() 
+    
+    while not  keyboard.is_pressed("p"):
+        pass
+    while not keyboard.is_pressed("q"):
+        img_np = camera.get_latest_frame() 
                     
-            if img_np is None: 
-                continue
-            stopwatch = time.perf_counter()        
+        if img_np is None: 
+            continue
+        stopwatch = time.perf_counter()        
                         # KROK 2: Przesunięcie i wgranie do VRAM (o 25% mniej bajtów po PCIe)
-            raw_frames_gpu = torch.roll(raw_frames_gpu, shifts=-1, dims=0)
-            raw_frames_gpu[-1] = torch.from_numpy(img_np)
-            core_speeds = [speeds[0]/360,speeds[1]/360,speeds[2]/360,speeds[3]/360,listner.get_speed_from_telemetry()/360]
-            speeds = core_speeds
+        raw_frames_gpu = torch.roll(raw_frames_gpu, shifts=-1, dims=0)
+        raw_frames_gpu[-1] = torch.from_numpy(img_np)
+        core_speeds = [speeds[0],speeds[1],speeds[2],speeds[3],listner.get_speed_from_telemetry()]
+        speeds = core_speeds
                # KROK 3: Operacje na GPU
                # [5, H, W, 3] -> konwersja do float i div_(255.0)
-            gpu_processed = raw_frames_gpu.float().div_(255.0)
+        gpu_processed = raw_frames_gpu.float().div_(255.0)
                
                         
                         # Przestawienie pod Conv3D: [5, H, W, 3] -> [1, 3, 5, H, W]
-            gpu_processed = gpu_processed.permute(3, 0, 1, 2).unsqueeze(0)
+        gpu_processed = gpu_processed.permute(3, 0, 1, 2).unsqueeze(0)
                     
                         # Skalowanie w VRAM
                         
-            resized = F.interpolate(
-                           gpu_processed, 
-                           size=(5,  target_size[0],target_size[1]), 
-                           mode='nearest', 
+        resized = F.interpolate(
+                        gpu_processed, 
+                        size=(5,  target_size[0],target_size[1]), 
+                        mode='nearest', 
                        )  
-            input_tensor.copy_(resized)
+        input_tensor.copy_(resized)
  
-            images_batch = input_tensor
-            speeds_batch = speeds_batch = torch.Tensor(speeds).to(device, non_blocking=True).unsqueeze(0)
+        images_batch = input_tensor
+        speeds_batch = speeds_batch = torch.Tensor(speeds).to(device, non_blocking=True).unsqueeze(0)
+        optimizer.zero_grad(set_to_none=True)
+        with torch.autocast(device.type, enabled=True, dtype=torch.float16):
+            outputs = model(images_batch, speeds_batch)
+
+        reward = -1
+        if(keyboard.is_pressed('n')):
+            reward = 1
+        loss = (outputs).mean() * reward
             
-            with torch.autocast(device.type, enabled=True, dtype=torch.float16):
-                outputs = model(images_batch, speeds_batch)
-            # lt_rt = round(outputs[0][1].item(),2)
-            # if lt_rt < 0:
-            #     controller.set_triggers(-lt_rt,0)
-            # else:
-            #     controller.set_triggers(0,lt_rt)
-            controller.set_left_stick(round(outputs[0][0].item(),2),0)
-            controller.set_triggers(outputs[0][2],outputs[0][1])
-            print(f"Time {(time.perf_counter() - stopwatch) * 1000}")
-            print(outputs)
+        loss.backward()
+        optimizer.step()
+        controller.set_triggers(round(outputs[0][2].item(),3),round(outputs[0][1].item(),3))
+        controller.set_left_stick(round(outputs[0][0].item(),3),0)
+        print(f"Time {(time.perf_counter() - stopwatch) * 1000}")
+        print(loss.item())
+        print(outputs)
+    model_path = f"model_RLEBLR0_00001_AUDI_TT.pth"
+    torch.save(model.state_dict(), model_path )
+    print(f"Zapisano model do {model_path}")
+        
 if __name__ == "__main__":
-    from AiModels.OnlyTanhModel import OnlyTanhModel
     device = torch.device("cuda")
-    model = FirstModel.ForzaH4Model().to(device)
-            
+    model = SecondModel.SecondFH4Model().to(device)
+    
     # # Wczytujemy checkpoint
-    checkpoint = torch.load(r"C:\FH4_AI_Driver\model_200E16N3AUDI_TT_With_Goliath.pth", map_location=device)
+    checkpoint = torch.load(r"C:\FH4_AI_Driver\model_200E32BLR0_000016_AUDI_TT.pth", map_location=device)
     
     # Wczytujemy stan modelup
     model.load_state_dict(checkpoint)

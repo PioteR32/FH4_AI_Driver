@@ -43,7 +43,7 @@ def save_data(queue:Queue,
         string =screenshots_dir + "\\telemetry.csv"
         with open(string,mode="w", newline="", encoding="utf-8") as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow(["screnshot_name","LT" ,"RT","Steering","Speed_kmh", "Race_Position"])
+            writer.writerow(["screnshot_name","LT" ,"RT","Steering","Speed_kmh", "Race_Position","Front_force","Cornering_force"])
             print(f"Rozpoczęto zapis danych do pliku telemetry.csv...")
             while True:
                 stopwatch = time.perf_counter()
@@ -58,7 +58,7 @@ def save_data(queue:Queue,
                     resized =cv2.resize(cv2.cvtColor(screenshot.img, cv2.COLOR_BGRA2BGR),crop_2560x1440p,interpolation=cv2.INTER_NEAREST)
                     Screenshot.save_cv2(resized,screenshot.telemetry[0],screenshots_dir)
                     writer.writerow(screenshot.telemetry)
-                    if(i %100):
+                    if(i % 100 * index_step == 0):
                         csv_file.flush()
                 elif stop_event is not None and stop_event.is_set():
                    
@@ -84,10 +84,13 @@ def takingData(controllerHandler:XboxControllerReader
     while not keyboardHandler.is_key_pressed("p"):
         pass
     while keyboardHandler.is_key_pressed("q") == False:
-        telemetry_list = [0,0,0,0,0,0]
+        telemetry_list = [0,0,0,0,0,0,0,0]
         start_timestamp_ms = time.perf_counter() 
-        telemetry_list[4] = telemetry.get_speed_from_telemetry()
-        telemetry_list[5] = telemetry.get_race_position_from_telemetry()
+        all_stats = telemetry.get_all_stat()
+        telemetry_list[4] = all_stats[0] #speed
+        telemetry_list[5] = all_stats[1] #race_pos
+        telemetry_list[6] = all_stats[2] #front_force
+        telemetry_list[7] = all_stats[3] #cornering_force
         telemetry_list[1],telemetry_list[2],telemetry_list[3] = controllerHandler.read_controller_state()
         camera_img = camera.get_latest_frame()
         queues[actually_queue].put(SendingClass(camera_img, telemetry_list))
@@ -107,7 +110,7 @@ if __name__ == "__main__":
     handler = KeyboardHandler()
     queue = Queue()
     queues = [Queue() for _ in range(5)]  # Example: 5 queues
-    screenshots_dir = "c:\\screenshots\\ASTON_MARTIN_FHEDITION_EVAL"
+    screenshots_dir = "c:\\screenshots\\AUDI_TT"
     
     print("Taking screenshots...")
     screenshot_dirs = []

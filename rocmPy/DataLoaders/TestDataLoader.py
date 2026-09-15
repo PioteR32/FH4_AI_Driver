@@ -2,6 +2,7 @@
 from torch.utils.data import Dataset, DataLoader
 import torch
 import os
+import re
 import sys
 import pandas as pd
 import numpy as np
@@ -10,16 +11,19 @@ import gc
 import MenagePhotos.Screenshot as Screenshot
 # class FolderCsv:
 #     def __init__(self, folder):
-class SimpleDataset(Dataset):
+class TestDataset(Dataset):
+    def extract_number(text):
+        match = re.search(r'\d+', str(text))
+        return int(match.group()) if match else 0
     def __init__(self, main_path=None, main_name_of_folder=None):
         self.main_path = main_path
         self.main_name_of_folder = main_name_of_folder
         
         self.data_folders = [f for f in os.listdir(main_path) if f.startswith(self.main_name_of_folder)]
         self.folders_csv_map = {}
-        
+        self.folders_lenght_map = {}
         # Wstępne przetworzenie danych do czystych tablic NumPy (redukcja narzutu RAM)
-        min_samples = float('inf')
+        min_samples = 0
         for folder in self.data_folders:
             csv_path = os.path.join(main_path, folder, "telemetry.csv")
             if os.path.exists(csv_path):
@@ -33,32 +37,40 @@ class SimpleDataset(Dataset):
                 rt = df['RT'].values.astype(np.float16)
                 
                 length = len(names)
-                if length < min_samples:
-                    min_samples = length
-                    
+                numbers = np.array([TestDataset.extract_number(name) for name in names])
+                sort_indices = np.argsort(numbers)
+                min_samples += length
+                self.folders_lenght_map[folder] = {"lenght":length }   
                 self.folders_csv_map[folder] = {
-                    'names': names,
-                    'speeds': speeds,
-                    'targets': np.stack([steering, rt ,lt ], axis=1) # [N, 3]
+                    'names': names[sort_indices],
+                    'speeds': speeds[sort_indices],
+                    'targets': np.stack([steering, rt ,lt ], axis=1)[sort_indices] # [N, 3]
                 }
-        
-        self.samples_per_folder = min_samples - 10
-        self.total_samples = self.samples_per_folder * len(self.data_folders)
+                
+         
+        self.total_samples = min_samples - min_samples // 100
         self.get_item_index = 0  # Indeks do śledzenia, który element jest pobierany w __getitem__
 
     def __len__(self):
         return self.total_samples
 
     def __getitem__(self, idx):
-        folder_idx = idx // self.samples_per_folder
-        image_idx = idx % self.samples_per_folder + 5
-
-        current_folder = self.data_folders[folder_idx]
-        folder_path = os.path.join(self.main_path, current_folder)
-        data = self.folders_csv_map[current_folder]
-
+        previous_folders_lenght = 0
+        data,folder_path,current_folder = (0,0,0)
+        for folder in self.data_folders:
+            folder_path = os.path.join(self.main_path, folder)
+            if previous_folders_lenght + self.folders_lenght_map[folder]['lenght']> idx:
+                current_folder = folder
+                data = self.folders_csv_map[current_folder]
+                image_idx = idx - previous_folders_lenght 
+                break
+            previous_folders_lenght += self.folders_lenght_map[folder]['lenght']
+        
+        
         # Prealokacja bezpośrednio w formacie PyTorch (5, C, H, W) jako uint8
         list_of_images = np.zeros((5, 720, 1280, 3), dtype=np.uint8)
+        if image_idx + 10 >= self.folders_lenght_map[folder]['lenght']:
+            image_idx -= 10
         
         for i in range(5):
             image_name = data['names'][image_idx + i]
@@ -74,7 +86,7 @@ class SimpleDataset(Dataset):
 
 
 if __name__ == "__main__":
-    simple_dataset = SimpleDataset(r"C:\screenshots", "ASTON_MARTIN_FHEDITION")
+    simple_dataset = TestDataset(r"C:\screenshots", "ASTON_MARTIN_FHEDITION")
     # pin_memory=True przyspiesza transfer z RAM do VRAM
     simple_dataloader = DataLoader(simple_dataset, batch_size=8, shuffle=True, pin_memory=True)
 

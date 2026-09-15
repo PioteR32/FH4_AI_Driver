@@ -10,7 +10,7 @@ import gc
 import MenagePhotos.Screenshot as Screenshot
 # class FolderCsv:
 #     def __init__(self, folder):
-class SimpleDataset(Dataset):
+class OnlyTanhLabelsDataSet(Dataset):
     def __init__(self, main_path=None, main_name_of_folder=None):
         self.main_path = main_path
         self.main_name_of_folder = main_name_of_folder
@@ -31,7 +31,7 @@ class SimpleDataset(Dataset):
                 steering = df['Steering'].values.astype(np.float16)
                 lt = df['LT'].values.astype(np.float16)
                 rt = df['RT'].values.astype(np.float16)
-                
+
                 length = len(names)
                 if length < min_samples:
                     min_samples = length
@@ -39,7 +39,7 @@ class SimpleDataset(Dataset):
                 self.folders_csv_map[folder] = {
                     'names': names,
                     'speeds': speeds,
-                    'targets': np.stack([steering, rt ,lt ], axis=1) # [N, 3]
+                    'targets': np.stack([steering,  np.where(lt > 0, -np.round(lt,4), np.round(rt,4)) ], axis=1) # [N, 3]
                 }
         
         self.samples_per_folder = min_samples - 10
@@ -74,7 +74,7 @@ class SimpleDataset(Dataset):
 
 
 if __name__ == "__main__":
-    simple_dataset = SimpleDataset(r"C:\screenshots", "ASTON_MARTIN_FHEDITION")
+    simple_dataset = OnlyTanhLabelsDataSet(r"C:\screenshots", "ASTON_MARTIN_FHEDITION")
     # pin_memory=True przyspiesza transfer z RAM do VRAM
     simple_dataloader = DataLoader(simple_dataset, batch_size=8, shuffle=True, pin_memory=True)
 

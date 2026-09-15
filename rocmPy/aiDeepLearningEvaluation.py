@@ -5,6 +5,7 @@ import torch.nn as nn
 import multiprocessing
 from torch.utils.data import DataLoader
 from AiModels.FirstModel import ForzaH4Model
+from AiModels.SecondModel import SecondFH4Model
 from DataLoaders.DataLoader import SimpleDataset
 
 def evaluate_model(
@@ -88,7 +89,7 @@ def load_and_evaluate_models(model_files: list, device: torch.device, test_loade
         dict: Dictionary with results for each model
     """
     # Define the loss function (using MSE since it's a regression task based on model structure)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.SmoothL1Loss()
     
     results = {}
     
@@ -124,6 +125,7 @@ def load_and_evaluate_models(model_files: list, device: torch.device, test_loade
     return results
 
 if __name__ == "__main__":
+    from DataLoaders.TestDataLoader import TestDataset
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     multiprocessing.freeze_support()
     
@@ -156,13 +158,13 @@ if __name__ == "__main__":
         # You may need to modify the path and folder name based on your actual test data
         try:
             test_loader = DataLoader(
-                SimpleDataset("c:\\screenshots", "ASTON_MARTIN_FHEDITION_EVAL"),
+                TestDataset("c:\\screenshots", "AUDI_TT_EVAL"),
                   batch_size=1, 
                   shuffle=False,  # Usually we don't shuffle for evaluation
-                  num_workers=12,
+                  num_workers=8,
                   pin_memory=True,
                   persistent_workers=True,
-                  prefetch_factor=1)
+                  prefetch_factor=2)
             
             print("Test DataLoader created successfully")
             print("Running evaluation...")

@@ -5,8 +5,9 @@ import torch.nn as nn
 import multiprocessing
 import subprocess
 from torch.utils.data import DataLoader
-from AiModels.FirstModel import ForzaH4Model
-from DataLoaders.DataLoader import SimpleDataset
+
+
+import LossFunc
 # os.environ["MIOPEN_CONV_PREFER_EXEC_TIME"] = "0"
 # os.environ["MIOPEN_DEBUG_CONV_GEMM"] = "1"
 # torch.backends.cudnn.benchmark = False
@@ -25,6 +26,7 @@ def train_model(
     history = {'train_loss': [], 'train_acc': []}
     model_number = 1
     file = open("log.txt","w")
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20, eta_min=1e-6)
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
@@ -64,12 +66,13 @@ def train_model(
             if history["train_loss"][epoch - 1] == history["train_loss"][epoch] and history["train_loss"][epoch - 2] == history["train_loss"][epoch]:
                 subprocess.run(["shutdown", "/s", "/t", "600"])
                 break
-
-        if (epoch + 1) % 10 == 0:
-            model_path = f"model_200E32BLR0_00001{model_number}.pth"
+        scheduler.step()
+        if (epoch + 1) % 2 == 0:
+            model_path = f"model_{epochs}E{dataloader.batch_size}N{model_number}AUDI_TT_With_Goliath.pth"
             torch.save(model.state_dict(), model_path )
             print(f"Zapisano model do {model_path}")
             model_number += 1
+            
 
         # # Czyszczenie bufora alokatora CUDA po każdej epoce
         if torch.cuda.is_available():
@@ -77,21 +80,32 @@ def train_model(
 
     return history
 if __name__ == "__main__":
-    time.sleep(18000)
+    from AiModels.OnlyTanhModel import OnlyTanhModel
+    from AiModels.FirstModel import ForzaH4Model
+    from AiModels.SecondModel import SecondFH4Model
+
+    from DataLoaders.DataLoader import SimpleDataset
+    from DataLoaders.OnlyTahnOutputsDataSet import OnlyTanhLabelsDataSet
+    from DataLoaders.TestDataLoader import TestDataset
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     multiprocessing.freeze_support()
     # 1. Inicjalizacja komponentów
-    model = ForzaH4Model().to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)
+    model = SecondFH4Model().to(device)
+    # checkpoint = torch.load(r"C:\FH4_AI_Driver\FirstModels\model_200E32BLR0_0000111.pth", map_location=device)
+        
+    #     # Wczytujemy stan modelup
+    # model.load_state_dict(checkpoint)
+    criterion = LossFunc.CustomDriveLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
     train_loader = DataLoader(
-        SimpleDataset("D:\\screenshots", "ASTON_MARTIN_FHEDITION"),
-          batch_size=32, 
+        TestDataset("D:\\screenshots", "AUDI_Front_TT"),
+          batch_size=16, 
           shuffle=True,
           num_workers=12,
           pin_memory=True,
           persistent_workers=False,
-          prefetch_factor=1)
+          prefetch_factor=2)
     # 2. Uruchomienie pętli na N epok
     history = train_model(
         model=model,

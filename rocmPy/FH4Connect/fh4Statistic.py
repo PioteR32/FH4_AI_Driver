@@ -49,28 +49,28 @@ class FH4TelemetryListener:
         except KeyboardInterrupt:
             print("\n\nZatrzymano nasłuchiwanie.")
     #160-164 jak wyjeżdża na trawę to się zwiększa normalnie 0.0
+    def get_all_stat(self):
+        try:
+            if self.data is None:
+                return None
+            with self.lock:
+                cornering_force = struct.unpack_from("<f", self.data, 20)    # Uślizg wzdłużny
+                front_force = struct.unpack_from("<f", self.data, 28)    # Uślizg wzdłużny
+                vx, vy, vz = struct.unpack("<fff", self.data[32:44])
+                race_position = struct.unpack_from('B', self.data, 314)[0]
+            v = math.sqrt(vx**2 + vy**2 + vz**2) * 3.6
+            return [v,race_position,front_force,cornering_force]        
+                        
+        except KeyboardInterrupt:
+            print("\n\nZatrzymano nasłuchiwanie.")
     def get_tire_split(self):
         try:
             if self.data is None:
                 return None
             with self.lock:
-                slip_ratio = struct.unpack_from("<ffff", self.data, 212)    # Uślizg wzdłużny
-                slip_angle = struct.unpack_from("<ffff", self.data, 228)    # Uślizg poprzeczny
-                combined_slip = struct.unpack_from("<ffff", self.data, 244) # Uślizg złożony
-                norm_slip = struct.unpack_from("<ffff", self.data, 144)
-
-                # Offset 160: Tire Combined Slip (FL, FR, RL, RR)
-                comb_slip = struct.unpack_from("<ffff", self.data, 160)
-
-                print(f"Normalized Slip (144): {norm_slip}")
-                print(f"Combined Slip   (160): {comb_slip}")
-                # Prędkość obrotowa kół z offsetu 80
-                wheel_speed = struct.unpack_from("<ffff", self.data, 80)
-
-                print(f"Wheel Speed (80-95):  {[round(x, 1) for x in wheel_speed]}")
-                print(f"Slip Ratio (212-227): {[round(x, 2) for x in slip_ratio]}")
-                print(f"Combined   (244-259): {[round(x, 2) for x in combined_slip]}")
-                print("=" * 60)
+                cornering_force = struct.unpack_from("<f", self.data, 20)    # Uślizg wzdłużny
+                front_force = struct.unpack_from("<f", self.data, 28)    # Uślizg wzdłużny
+                
                 
         except KeyboardInterrupt:
             print("\n\nZatrzymano nasłuchiwanie.")
@@ -88,4 +88,4 @@ if __name__ == "__main__":
         if race_position is not None:
             print(f"Current Race Position: {race_position}")
         listener.get_tire_split()
-        time.sleep(0.1)  # Dodajemy krótką przerwę, aby nie przeciążać CPU
+        time.sleep(0.2)  # Dodajemy krótką przerwę, aby nie przeciążać CPU
