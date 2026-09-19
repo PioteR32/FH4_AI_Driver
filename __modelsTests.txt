@@ -45,3 +45,14 @@
 {'loss': 0.05449064625578932, 'accuracy': 0.8479342668672607, 'model_name': 'model_200E16N7AUDI_TT_With_Goliath.pth'}
 {'loss': 0.05581827361691993, 'accuracy': 0.8773868765189214, 'model_name': 'model_200E16N8AUDI_TT_With_Goliath.pth'}
 {'loss': 0.05710015317523233, 'accuracy': 0.8604521081664931, 'model_name': 'model_200E16N9AUDI_TT_With_Goliath.pth'}
+
+{'loss': 0.07436423787035233, 'accuracy': 0.8471821484172288, 'model_name': 'second_model_200E16N10AUDI_TT_With_Goliath.pth'}
+{'loss': 0.06824369181493242, 'accuracy': 0.7854592631032693, 'model_name': 'second_model_200E16N1AUDI_TT_With_Goliath.pth'}
+{'loss': 0.0684145321830653, 'accuracy': 0.7837467566165023, 'model_name': 'second_model_200E16N2AUDI_TT_With_Goliath.pth'}
+{'loss': 0.07104104009836901, 'accuracy': 0.8054281266216917, 'model_name': 'second_model_200E16N3AUDI_TT_With_Goliath.pth'}
+{'loss': 0.07484937021738704, 'accuracy': 0.7867877529839128, 'model_name': 'second_model_200E16N4AUDI_TT_With_Goliath.pth'}
+{'loss': 0.07247715739688024, 'accuracy': 0.8474519979242345, 'model_name': 'second_model_200E16N5AUDI_TT_With_Goliath.pth'}
+{'loss': 0.07383119802825036, 'accuracy': 0.8421899325376232, 'model_name': 'second_model_200E16N6AUDI_TT_With_Goliath.pth'}
+{'loss': 0.07306230141221323, 'accuracy': 0.8500155682407888, 'model_name': 'second_model_200E16N7AUDI_TT_With_Goliath.pth'}
+{'loss': 0.07421813840561498, 'accuracy': 0.8574571873378308, 'model_name': 'second_model_200E16N8AUDI_TT_With_Goliath.pth'}
+{'loss': 0.07364387103610044, 'accuracy': 0.8556824078879086, 'model_name': 'second_model_200E16N9AUDI_TT_With_Goliath.pth'}

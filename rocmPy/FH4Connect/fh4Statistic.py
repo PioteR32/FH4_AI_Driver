@@ -19,7 +19,8 @@ class FH4TelemetryListener:
     def listen_for_telemetry(self):
         while self.is_running:
             try:
-                data, addr = self.sock.recvfrom(1024)
+                # data, addr = self.sock.recvfrom(1024)
+                data = bytes(324)
                 if len(data) == 324:
                     with self.lock:
                         self.data = data
@@ -54,12 +55,11 @@ class FH4TelemetryListener:
             if self.data is None:
                 return None
             with self.lock:
-                cornering_force = struct.unpack_from("<f", self.data, 20)    # Uślizg wzdłużny
-                front_force = struct.unpack_from("<f", self.data, 28)    # Uślizg wzdłużny
+                cornering_force = struct.unpack_from("<ff", self.data[20:28])    # Uślizg wzdłużny
                 vx, vy, vz = struct.unpack("<fff", self.data[32:44])
                 race_position = struct.unpack_from('B', self.data, 314)[0]
             v = math.sqrt(vx**2 + vy**2 + vz**2) * 3.6
-            return [v,race_position,front_force,cornering_force]        
+            return [v,race_position,cornering_force[0],cornering_force[1]]        
                         
         except KeyboardInterrupt:
             print("\n\nZatrzymano nasłuchiwanie.")
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         speed = listener.get_speed_from_telemetry()
         if speed is not None:
             print(f"Current Speed: {speed:.2f} km/h")
-        race_position = listener.get_race_position_from_telemetry()
+        race_position = listener.get_all_stat()
         if race_position is not None:
             print(f"Current Race Position: {race_position}")
         listener.get_tire_split()

@@ -106,7 +106,7 @@ def evaluate_model_in_FH4(
             #     controller.set_triggers(-lt_rt,0)
             # else:
             #     controller.set_triggers(0,lt_rt)
-            controller.set_left_stick(round(outputs[0][0].item(),2),0)
+            controller.set_left_stick(round(outputs[0][0].item(),3),0)
             controller.set_triggers(outputs[0][2],outputs[0][1])
             print(f"Time {(time.perf_counter() - stopwatch) * 1000}")
             print(outputs)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     model = FirstModel.ForzaH4Model().to(device)
             
     # # Wczytujemy checkpoint
-    checkpoint = torch.load(r"C:\FH4_AI_Driver\model_200E16N3AUDI_TT_With_Goliath.pth", map_location=device)
+    checkpoint = torch.load(r"C:\FH4_AI_Driver\model_200E16N4AUDI_TT_With_Goliath.pth", map_location=device)
     
     # Wczytujemy stan modelup
     model.load_state_dict(checkpoint)

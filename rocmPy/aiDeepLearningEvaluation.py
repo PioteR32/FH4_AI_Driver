@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from AiModels.FirstModel import ForzaH4Model
 from AiModels.SecondModel import SecondFH4Model
 from DataLoaders.DataLoader import SimpleDataset
-
+import LossFunc
 def evaluate_model(
     model: torch.nn.Module, 
     dataloader: DataLoader, 
@@ -89,7 +89,7 @@ def load_and_evaluate_models(model_files: list, device: torch.device, test_loade
         dict: Dictionary with results for each model
     """
     # Define the loss function (using MSE since it's a regression task based on model structure)
-    criterion = nn.SmoothL1Loss()
+    criterion = LossFunc.CustomDriveLoss(2,2)
     
     results = {}
     
@@ -97,7 +97,7 @@ def load_and_evaluate_models(model_files: list, device: torch.device, test_loade
         print(f"Loading and evaluating model from: {model_file}")
         
         # Create a new instance of the model
-        model = ForzaH4Model()
+        model = SecondFH4Model()
         
         # Load the model state dict
         try:
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     print(f"Looking for model files in: {current_directory}")
     
     # Find all model files with the pattern used during training
-    model_files = find_model_files(current_directory, "model_")
+    model_files = find_model_files(current_directory, "SecondFH")
     
     if model_files:
         print(f"Found {len(model_files)} model files:")
