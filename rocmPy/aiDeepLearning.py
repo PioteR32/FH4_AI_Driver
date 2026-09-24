@@ -9,11 +9,7 @@ from torch.utils.data import DataLoader
 
 
 import LossFunc
-# os.environ["MIOPEN_CONV_PREFER_EXEC_TIME"] = "0"
-# os.environ["MIOPEN_DEBUG_CONV_GEMM"] = "1"
-# torch.backends.cudnn.benchmark = False
-# torch.backends.cudnn.benchmark = False
-# torch.backends.cudnn.deterministic = True
+
 def train_model(
     modelName:str,
     model: torch.nn.Module, 
@@ -26,7 +22,7 @@ def train_model(
 ) -> dict:
 
     model.to(device)
-    weights = torch.tensor([4.0,1.0,2.0]).to(device=device)
+    weights = torch.tensor([2.0,1.0,1.5]).to(device=device)#wagi do losu sterowanie,hamulec,gaz
     history = {'train_loss': [], 'train_acc': []}
     model_number = 1
     file = open("log.txt","w")
@@ -40,17 +36,17 @@ def train_model(
             images_raw, speeds_batch = batch_inputs
 
             # Przenosimy na GPU i normalizujemy w jednym kroku (oszczędność VRAM)
-            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0, 4, 1, 2, 3).div_(255.0)
-            speeds_batch = speeds_batch.to(device, dtype=torch.float16, non_blocking=True)
-            targets = targets.to(device, dtype=torch.float16, non_blocking=True)
+            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0, 4, 1, 2, 3).div_(255.0) #normalizacja do 0-1 
+            speeds_batch = speeds_batch.to(device, dtype=torch.float16, non_blocking=True) #poprawne wyniki
+            targets = targets.to(device, dtype=torch.float16, non_blocking=True) #poprawne wyniki
 
             optimizer.zero_grad(set_to_none=True) # Zwalnia pamięć po gradientach zamiast zerować
             with torch.autocast(device.type, enabled=True, dtype=torch.float16):  # Włączamy automatyczne mieszanie precyzji
                 outputs = model(images_batch, speeds_batch)
-                loss = F.cross_entropy(outputs,targets,weights)
+                loss = F.cross_entropy(outputs,targets,weights) #funkcja która wylicza loss
             
-            loss.backward()
-            optimizer.step()
+            loss.backward() #wyliczanie gradientów
+            optimizer.step() #aktualizacja wag i biasów
 
             batch_size = targets.size(0)
             running_loss += loss.item() * batch_size
@@ -66,11 +62,14 @@ def train_model(
         print(log_str)
         file.write(log_str + "\n")
         file.flush()
+
         if epoch > 3:
             if history["train_loss"][epoch - 1] == history["train_loss"][epoch] and history["train_loss"][epoch - 2] == history["train_loss"][epoch]:
                 subprocess.run(["shutdown", "/s", "/t", "600"])
                 break
         scheduler.step()
+
+        #zapis modelu
         if (epoch + 1) % 2 == 0:
             model_path = modelName + f"{epochs}E{dataloader.batch_size}N{model_number}.pth"
             torch.save(model.state_dict(), model_path )
@@ -102,13 +101,13 @@ if __name__ == "__main__":
     # model.load_state_dict(checkpoint)
     criterion = LossFunc.CustomDriveLoss(2,2)
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
-    modelName = "second_weights"
+    modelName = "TEST_"
 
     train_loader = DataLoader(
             TestDataset("D:\\screenshots", "AUDI_TT"),
               batch_size=16, 
               shuffle=True,
-              num_workers=6,
+              num_workers=8,
               pin_memory=True,
               persistent_workers=False,
               prefetch_factor=2,
