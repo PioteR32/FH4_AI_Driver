@@ -15,10 +15,10 @@ class Resnet18DL(Dataset):
     def extract_number(text):
         match = re.search(r'\d+', str(text))
         return int(match.group()) if match else 0
-    def __init__(self, main_path=None, main_name_of_folder=None):
+    def __init__(self, main_path=None, main_name_of_folder=None,pre_val_on_img = 1):
         self.main_path = main_path
         self.main_name_of_folder = main_name_of_folder
-        
+        self.pre_val_on_img= pre_val_on_img
         self.data_folders = [f for f in os.listdir(main_path) if f.startswith(self.main_name_of_folder)]
         self.folders_csv_map = {}
         self.folders_lenght_map = {}
@@ -35,8 +35,9 @@ class Resnet18DL(Dataset):
                 steering = df['Steering'].values.astype(np.float16)
                 lt = df['LT'].values.astype(np.float16)
                 rt = df['RT'].values.astype(np.float16)
-                
-                length = len(names)
+                cornering_force = df['Cornering_force'].values.astype(np.float16)
+                front_force = df['Front_force'].values.astype(np.float16)
+                length = len(names)- self.pre_val_on_img - 10 
                 numbers = np.array([Resnet18DL.extract_number(name) for name in names])
                 sort_indices = np.argsort(numbers)
                 min_samples += length
@@ -44,6 +45,8 @@ class Resnet18DL(Dataset):
                 self.folders_csv_map[folder] = {
                     'names': names[sort_indices],
                     'speeds': speeds[sort_indices],
+                    'cornering_force':cornering_force[sort_indices],
+                    'front_force':front_force[sort_indices],
                     'targets': np.stack([steering, rt ,lt ], axis=1)[sort_indices] # [N, 3]
                 }
                 
@@ -69,18 +72,19 @@ class Resnet18DL(Dataset):
         
         # Prealokacja bezpośrednio w formacie PyTorch (5, C, H, W) jako uint8
         
-        if image_idx + 1 >= self.folders_lenght_map[folder]['lenght']:
-            image_idx -= 1
+        # if image_idx + self.pre_val_on_img >= self.folders_lenght_map[folder]['lenght']:
+        #     image_idx -= self.pre_val_on_img
         
       
         image_name = data['names'][image_idx]
         img =np.asarray( Screenshot.read_screenshot(folder_path, image_name),dtype=np.uint8)
-        game_inputs = np.asarray(data['speeds'][image_idx])
-             
-
+        speeds = np.asarray(data['speeds'][image_idx:image_idx + self.pre_val_on_img])
+        cornering_force = np.asarray(data['cornering_force'][image_idx:image_idx + self.pre_val_on_img])
+        front_force = np.asarray(data['front_force'][image_idx:image_idx + self.pre_val_on_img])
+        geme_inputs = np.concatenate((speeds,cornering_force,front_force))
         # Utworzenie tensorów (zero-copy z NumPy dla obrazów)
         torch_image = torch.from_numpy(img) # uint8, shape: [5, 3, 720, 1280]
-        game_inputs_torch = torch.from_numpy(game_inputs) # float16
+        game_inputs_torch = torch.from_numpy(geme_inputs) # float16
         label = torch.from_numpy(data['targets'][image_idx]) # float16
 
         return (torch_image, game_inputs_torch), label

@@ -36,7 +36,7 @@ def train_model(
             images_raw, speeds_batch = batch_inputs
 
             # Przenosimy na GPU i normalizujemy w jednym kroku (oszczędność VRAM)
-            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0, 4, 1, 2, 3).div_(255.0) #normalizacja do 0-1 
+            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0, 3, 1, 2).div_(255.0) #normalizacja do 0-1 
             speeds_batch = speeds_batch.to(device, dtype=torch.float16, non_blocking=True) #poprawne wyniki
             targets = targets.to(device, dtype=torch.float16, non_blocking=True) #poprawne wyniki
 
@@ -46,7 +46,8 @@ def train_model(
                 loss = F.cross_entropy(outputs,targets,weights) #funkcja która wylicza loss
             
             loss.backward() #wyliczanie gradientów
-            optimizer.step() #aktualizacja wag i biasów
+            if i % 4:
+                optimizer.step() #aktualizacja wag i biasów
 
             batch_size = targets.size(0)
             running_loss += loss.item() * batch_size
@@ -86,28 +87,30 @@ if __name__ == "__main__":
     from AiModels.OnlyTanhModel import OnlyTanhModel
     from AiModels.FirstModel import ForzaH4Model
     from AiModels.SecondModel import SecondFH4Model
+    from AiModels.Resnet18Model import Resnet18Model
 
     from DataLoaders.DataLoader import SimpleDataset
     from DataLoaders.OnlyTahnOutputsDataSet import OnlyTanhLabelsDataSet
     from DataLoaders.TestDataLoader import TestDataset
+    from DataLoaders.Resnet18DL import Resnet18DL
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     multiprocessing.freeze_support()
     # 1. Inicjalizacja komponentów
-    model = SecondFH4Model().to(device)
+    model = Resnet18Model().to(device)
+
     # checkpoint = torch.load(r"C:\FH4_AI_Driver\FirstModels\model_200E32BLR0_0000111.pth", map_location=device)
-        
-    #     # Wczytujemy stan modelup
     # model.load_state_dict(checkpoint)
+
     criterion = LossFunc.CustomDriveLoss(2,2)
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
     modelName = "TEST_"
 
     train_loader = DataLoader(
-            TestDataset("D:\\screenshots", "AUDI_TT"),
+            Resnet18DL("D:\\screenshots", "AUDI_TT",2),
               batch_size=16, 
               shuffle=True,
-              num_workers=8,
+              num_workers=1,
               pin_memory=True,
               persistent_workers=False,
               prefetch_factor=2,

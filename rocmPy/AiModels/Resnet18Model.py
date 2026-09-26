@@ -11,13 +11,14 @@ class Resnet18Model(nn.Module):
     Output: (batch, 3) where [steering, throttle, brake] in range [-1.0, 1.0], [0.0, 1.0], [0.0, 1.0]
     """
     
-    def __init__(self, input_channels=3,):
+    def __init__(self, input_channels=3,num_types_diffrent_than_img = 3,num_data_on_type=2):
         super(Resnet18Model, self).__init__()
-        self.restInputs = nn.Linear(3,48)
-        self.backbone = resnet18(weights= ResNet18_Weights)
+        _num_of_rest_inputs=num_types_diffrent_than_img * num_data_on_type
+        self.restInputs = nn.Sequential(nn.Linear(_num_of_rest_inputs,48 + _num_of_rest_inputs),nn.ReLU())
+        self.backbone = resnet18(weights= ResNet18_Weights).to(dtype=torch.float16)
         self.backbone.fc = nn.Identity()
 
-        self.l1 = nn.Sequential(nn.Linear(560,256),nn.ReLU())
+        self.l1 = nn.Sequential(nn.Linear(512+48 + _num_of_rest_inputs,256),nn.ReLU())
         self.l2 = nn.Sequential(nn.Linear(256,128),nn.ReLU())
         self.l3 = nn.Sequential(nn.Linear(128,3))
         

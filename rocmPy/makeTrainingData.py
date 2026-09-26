@@ -43,7 +43,7 @@ def save_data(queue:Queue,
         string =screenshots_dir + "\\telemetry.csv"
         with open(string,mode="w", newline="", encoding="utf-8") as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow(["screnshot_name","LT" ,"RT","Steering","Speed_kmh", "Race_Position","Front_force","Cornering_force"])
+            writer.writerow(["screnshot_name","LT" ,"RT","Steering","Speed_kmh", "Race_Position","Cornering_force","Front_force"])
             print(f"Rozpoczęto zapis danych do pliku telemetry.csv...")
             while True:
                 stopwatch = time.perf_counter()
@@ -89,8 +89,8 @@ def takingData(controllerHandler:XboxControllerReader
         all_stats = telemetry.get_all_stat()
         telemetry_list[4] = all_stats[0] #speed
         telemetry_list[5] = all_stats[1] #race_pos
-        telemetry_list[6] = all_stats[2] #front_force
-        telemetry_list[7] = all_stats[3] #cornering_force
+        telemetry_list[6] = all_stats[2] #cornering_force
+        telemetry_list[7] = all_stats[3] #front_force
         telemetry_list[1],telemetry_list[2],telemetry_list[3] = controllerHandler.read_controller_state()
         camera_img = camera.get_latest_frame()
         queues[actually_queue].put(SendingClass(camera_img, telemetry_list))
