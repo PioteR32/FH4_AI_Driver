@@ -1,3 +1,9 @@
+"""
+Plik: LossFunc.py
+Opis: Zawiera definicję niestandardowej funkcji kosztu (CustomDriveLoss) 
+      używanej podczas trenowania modelu. Funkcja ta waży błędy sterowania, 
+      gazem i hamulcem, aby zapewnić bardziej precyzyjne uczenie się zachowań kierowcy.
+"""
 import torch
 import torch.nn as nn
 

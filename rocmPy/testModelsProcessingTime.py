@@ -1,3 +1,10 @@
+"""
+Plik: testModelsProcessingTime.py
+Opis: Skrypt do pomiaru czasu przetwarzania danych przez model sieci neuronowej.
+      Służy do profilowania wydajności (latency) operacji konwersji danych na tensory 
+      oraz czasu wnioskowania (inference) na urządzeniu GPU.
+"""
+
 
 import AiModels.FirstModel as FirstModel
 import MenagePhotos.Screenshot as Screenshot

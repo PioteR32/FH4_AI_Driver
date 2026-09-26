@@ -1,9 +1,15 @@
+"""
+Plik: gpuTesting.py
+Opis: Skrypt testowy do obciążania procesora graficznego (GPU) poprzez wykonywanie
+      intensywnych operacji na dużych macierzach (sieć neuronowa).
+      Służy do weryfikacji wydajności i stabilności karty graficznej pod pełnym obciążeniem.
+"""
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import time
-from datetime import datetime
 import gc
+from datetime import datetime
 
 # Sprawdź, czy CUDA jest dostępne
 if not torch.cuda.is_available():

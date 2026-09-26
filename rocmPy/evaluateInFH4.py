@@ -1,3 +1,9 @@
+"""
+Plik: evaluateInFH4.py
+Opis: Skrypt do ewaluacji modelu w czasie rzeczywistym podczas rozgrywki w Forza Horizon 4.
+      Pobiera dane z kamery i telemetrii, przetwarza je i wysyła sterowania (control signals)
+      do emulatora kontrolera Xbox w celu przetestowania modelu w środowisku gry.
+"""
 import bettercam
 import time
 import torch

@@ -1,3 +1,11 @@
+"""
+Plik: makeTrainingData.py
+Opis: Skrypt do automatycznego zbierania danych z rozgrywki. 
+      Przechwytuje obrazy z ekranu oraz dane z telemetrii gry (prędkość, pozycja, siły),
+      zapisując je w formie zestawu zsynchronizowanych obrazów i pliku CSV.
+      Wykorzystuje multiprocessing do równoległego zapisu danych w celu zachowania wysokiej wydajności.
+"""
+
 from typing import List
 
 from FH4Connect.fh4Statistic import FH4TelemetryListener

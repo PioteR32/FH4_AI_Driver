@@ -1,3 +1,10 @@
+"""
+Plik: aiDeepLearning.py
+Opis: Zawiera funkcję treningową do trenowania modeli sieci neuronowych (np. ResNet18) 
+      w celu sterowania samochodem w środowisku FH4. 
+      Obsługuje trening na GPU, użycie mieszanej precyzji (mixed precision), 
+      scheduler dla tempa uczenia oraz zapisywanie checkpointów modelu.
+"""
 import os
 import time
 import torch

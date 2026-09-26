@@ -1,3 +1,9 @@
+"""
+Plik: doPobieraniaZdjęcia.py
+Opis: Skrypt służący do przechwytywania klatek z kamery/ekranu w czasie rzeczywistym
+      (używając bettercam) i przygotowywania ich do podania na model sieci neuronowej.
+      Obsługuje buforowanie klatek i konwersję do formatu Tensor (Conv3D).
+"""
 import bettercam
 import torch
 import torch.nn.functional as F

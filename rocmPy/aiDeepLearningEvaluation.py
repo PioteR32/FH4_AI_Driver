@@ -1,3 +1,9 @@
+"""
+Plik: aiDeepLearningEvaluation.py
+Opis: Zawiera narzędzia do ewaluacji wytrenowanych modeli na danych testowych.
+      Umożliwia ładowanie modeli z plików, ocenianie ich skuteczności (loss, accuracy)
+      oraz porównywanie wyników wielu modeli jednocześnie.
+"""
 import os
 import time
 import torch

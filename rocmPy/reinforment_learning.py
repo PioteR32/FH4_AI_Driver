@@ -1,3 +1,10 @@
+"""
+Plik: reinforment_learning.py
+Opis: Skrypt do trenowania modelu przy użyciu metod uczenia przez wzmacnianie (Reinforcement Learning).
+      Model otrzymuje nagrodę (reward) na podstawie interakcji z otoczeniem (np. poprzez naciśnięcie klawisza),
+      co pozwala na optymalizację polityki sterowania w celu uzyskania jak najwyższej nagrody.
+"""
+
 import bettercam
 import time
 import torch
