@@ -6,10 +6,12 @@ from .FirstModel import ForzaH4Model
 from .SecondModel import SecondFH4Model
 from .OnlyTanhModel import OnlyTanhModel
 from .Resnet18Model import Resnet18Model
+from .OneImg import OneImgModel
 
 __all__ = [
     'ForzaH4Model'
     'SecondFH4Model'
     'OnlyTanhModel'
     'Resnet18Model'
+    'OneImgModel'
 ]

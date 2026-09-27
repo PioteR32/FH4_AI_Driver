@@ -29,7 +29,7 @@ def train_model(
 ) -> dict:
 
     model.to(device)
-    weights = torch.tensor([2.0,1.0,1.5]).to(device=device)#wagi do losu sterowanie,hamulec,gaz
+    weights = torch.tensor([0.5,0.25,0.25]).to(device=device)#wagi do losu sterowanie,hamulec,gaz
     history = {'train_loss': [], 'train_acc': []}
     model_number = 1
     file = open("log.txt","w")
@@ -43,25 +43,26 @@ def train_model(
             images_raw, speeds_batch = batch_inputs
 
             # Przenosimy na GPU i normalizujemy w jednym kroku (oszczędność VRAM)
-            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0, 3, 1, 2).div_(255.0) #normalizacja do 0-1 
+            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0,3,1,2).div_(255.0) #normalizacja do 0-1 
             speeds_batch = speeds_batch.to(device, dtype=torch.float16, non_blocking=True) #poprawne wyniki
-            targets = targets.to(device, dtype=torch.float16, non_blocking=True) #poprawne wyniki
+            targets = targets.to(device, dtype=torch.float32, non_blocking=True) #poprawne wyniki
 
-            optimizer.zero_grad(set_to_none=True) # Zwalnia pamięć po gradientach zamiast zerować
-            with torch.autocast(device.type, enabled=True, dtype=torch.float16):  # Włączamy automatyczne mieszanie precyzji
+             # Zwalnia pamięć po gradientach zamiast zerować
+            with torch.autocast(device.type, enabled=True, dtype=torch.float32):  # Włączamy automatyczne mieszanie precyzji
                 outputs = model(images_batch, speeds_batch)
-                loss = F.cross_entropy(outputs,targets,weights) #funkcja która wylicza loss
+                loss = F.cross_entropy(outputs,targets,weights)/4 #funkcja która wylicza loss
             
             loss.backward() #wyliczanie gradientów
-            if i % 4:
-                optimizer.step() #aktualizacja wag i biasów
+            if i % 3 or i ==  len(dataloader) - 1 :
+                optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
 
             batch_size = targets.size(0)
             running_loss += loss.item() * batch_size
             total_samples += batch_size
             if i % 50 == 0:
-                file.write(f"Epoka [{epoch+1}/{epochs}] | Batch [{i+1}/{len(dataloader)}] | Loss: {loss.item():.4f}\n")
-                print(f"Epoka [{epoch+1}/{epochs}] | Batch [{i+1}/{len(dataloader)}] | Loss: {loss.item():.4f}")
+                file.write(f"Epoka [{epoch+1}/{epochs}] | Batch [{i+1}/{len(dataloader)}] | Loss: {loss.item():.4f}| Time: {time.perf_counter() - stopwatch}\n")
+                print(f"Epoka [{epoch+1}/{epochs}] | Batch [{i+1}/{len(dataloader)}] | Loss: {loss.item():.4f}| Time: {time.perf_counter() - stopwatch}")
 
         epoch_train_loss = running_loss / total_samples
         history['train_loss'].append(epoch_train_loss)
@@ -95,6 +96,7 @@ if __name__ == "__main__":
     from AiModels.FirstModel import ForzaH4Model
     from AiModels.SecondModel import SecondFH4Model
     from AiModels.Resnet18Model import Resnet18Model
+    from AiModels.OneImg import OneImgModel
 
     from DataLoaders.DataLoader import SimpleDataset
     from DataLoaders.OnlyTahnOutputsDataSet import OnlyTanhLabelsDataSet
@@ -104,20 +106,20 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     multiprocessing.freeze_support()
     # 1. Inicjalizacja komponentów
-    model = Resnet18Model().to(device)
+    model = OneImgModel(num_speeds=90,rest_input_dim=48*3).to(device)
 
     # checkpoint = torch.load(r"C:\FH4_AI_Driver\FirstModels\model_200E32BLR0_0000111.pth", map_location=device)
     # model.load_state_dict(checkpoint)
 
     criterion = LossFunc.CustomDriveLoss(2,2)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
-    modelName = "TEST_"
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0001)
+    modelName = "Second2x256S1"
 
     train_loader = DataLoader(
-            Resnet18DL("D:\\screenshots", "AUDI_TT",2),
-              batch_size=16, 
+            Resnet18DL("D:\\screenshots", "AUDI_TT",30),
+              batch_size=64, 
               shuffle=True,
-              num_workers=1,
+              num_workers=12,
               pin_memory=True,
               persistent_workers=False,
               prefetch_factor=2,

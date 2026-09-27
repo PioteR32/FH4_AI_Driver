@@ -119,10 +119,10 @@ def evaluate_model_in_FH4(
 if __name__ == "__main__":
     from AiModels.OnlyTanhModel import OnlyTanhModel
     device = torch.device("cuda")
-    model = FirstModel.ForzaH4Model().to(device)
+    model = SecondModel.SecondFH4Model().to(device)
             
     # # Wczytujemy checkpoint
-    checkpoint = torch.load(r"C:\FH4_AI_Driver\model_200E16N4AUDI_TT_With_Goliath.pth", map_location=device)
+    checkpoint = torch.load(r"C:\FH4_AI_Driver\SecondNewdataSet8E24N4.pth", map_location=device)
     
     # Wczytujemy stan modelup
     model.load_state_dict(checkpoint)

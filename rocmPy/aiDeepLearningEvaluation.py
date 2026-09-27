@@ -153,7 +153,7 @@ if __name__ == "__main__":
     print(f"Looking for model files in: {current_directory}")
     
     # Find all model files with the pattern used during training
-    model_files = find_model_files(current_directory, "SecondFH")
+    model_files = find_model_files(current_directory, "SecondNewdata")
     
     if model_files:
         print(f"Found {len(model_files)} model files:")
@@ -166,7 +166,7 @@ if __name__ == "__main__":
             test_loader = DataLoader(
                 TestDataset("c:\\screenshots", "AUDI_TT_EVAL"),
                   batch_size=1, 
-                  shuffle=False,  # Usually we don't shuffle for evaluation
+                  shuffle=False,  
                   num_workers=8,
                   pin_memory=True,
                   persistent_workers=True,

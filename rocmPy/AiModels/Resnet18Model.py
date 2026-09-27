@@ -11,14 +11,14 @@ class Resnet18Model(nn.Module):
     Output: (batch, 3) where [steering, throttle, brake] in range [-1.0, 1.0], [0.0, 1.0], [0.0, 1.0]
     """
     
-    def __init__(self, input_channels=3,num_types_diffrent_than_img = 3,num_data_on_type=2):
+    def __init__(self, input_channels=3,num_types_diffrent_than_img = 3,num_data_on_type=1):
         super(Resnet18Model, self).__init__()
         _num_of_rest_inputs=num_types_diffrent_than_img * num_data_on_type
-        self.restInputs = nn.Sequential(nn.Linear(_num_of_rest_inputs,48 + _num_of_rest_inputs),nn.ReLU())
-        self.backbone = resnet18(weights= ResNet18_Weights).to(dtype=torch.float16)
+        self.restInputs = nn.Sequential(nn.Linear(_num_of_rest_inputs,48),nn.ReLU())
+        self.backbone = resnet18(weights= ResNet18_Weights)
         self.backbone.fc = nn.Identity()
 
-        self.l1 = nn.Sequential(nn.Linear(512+48 + _num_of_rest_inputs,256),nn.ReLU())
+        self.l1 = nn.Sequential(nn.Linear(512+48,256),nn.ReLU())
         self.l2 = nn.Sequential(nn.Linear(256,128),nn.ReLU())
         self.l3 = nn.Sequential(nn.Linear(128,3))
         
@@ -47,7 +47,8 @@ class Resnet18Model(nn.Module):
             output: Tensor of shape (batch_size, 3) with [steering, throttle, brake] values
         """
         x = self.backbone(x)
-        x = self.l1(torch.cat([x,self.restInputs(speeds)],dim=1))
+        x = torch.cat([x,self.restInputs(speeds)],dim=1)
+        x = self.l1(x)
         x = self.l2(x)
         # Output layer
         output = self.l3(x)
