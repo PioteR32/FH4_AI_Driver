@@ -8,6 +8,7 @@ import os
 import time
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import multiprocessing
 from torch.utils.data import DataLoader
 from AiModels.FirstModel import ForzaH4Model
@@ -35,23 +36,24 @@ def evaluate_model(
             images_raw, speeds_batch = batch_inputs
 
             # Przenosimy na GPU i normalizujemy w jednym kroku (oszczędność VRAM)
-            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0, 4, 1, 2, 3).div_(255.0)
+            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0, 3, 1, 2).div_(255.0)
             speeds_batch = speeds_batch.to(device, dtype=torch.float16, non_blocking=True)
             targets = targets.to(device, dtype=torch.float16, non_blocking=True)
 
             with torch.autocast(device.type, enabled=True, dtype=torch.float16):
                 outputs = model(images_batch, speeds_batch)
-                loss = criterion(outputs, targets)
+                loss = torch.mean(torch.abs(outputs - targets))
             
             batch_size = targets.size(0)
             total_loss += loss.item() * batch_size
             total_samples += batch_size
             
+            threshold = 0.1 
             # Calculate accuracy (if applicable for the task)
             # For multi-class classification, we'll compute accuracy based on max values
             if len(outputs.shape) > 1 and outputs.shape[1] > 1:
-                _, predicted = torch.max(outputs.data, 1)
-                correct_predictions += (predicted == targets).sum().item()
+                correct_predictions = (torch.abs(outputs - targets) < threshold).float().mean()
+                accuracy = correct_predictions * 100
     
     avg_loss = total_loss / total_samples
     accuracy = correct_predictions / total_samples if total_samples > 0 else 0.0
@@ -94,8 +96,9 @@ def load_and_evaluate_models(model_files: list, device: torch.device, test_loade
     Returns:
         dict: Dictionary with results for each model
     """
+    from AiModels.OneImg import OneImgModel
     # Define the loss function (using MSE since it's a regression task based on model structure)
-    criterion = LossFunc.CustomDriveLoss(2,2)
+    criterion = F.cross_entropy
     
     results = {}
     
@@ -103,7 +106,7 @@ def load_and_evaluate_models(model_files: list, device: torch.device, test_loade
         print(f"Loading and evaluating model from: {model_file}")
         
         # Create a new instance of the model
-        model = SecondFH4Model()
+        model = OneImgModel(num_speeds=90,rest_input_dim=48*3)
         
         # Load the model state dict
         try:
@@ -132,6 +135,7 @@ def load_and_evaluate_models(model_files: list, device: torch.device, test_loade
 
 if __name__ == "__main__":
     from DataLoaders.TestDataLoader import TestDataset
+    from DataLoaders.Resnet18DL import Resnet18DL
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     multiprocessing.freeze_support()
     
@@ -153,7 +157,7 @@ if __name__ == "__main__":
     print(f"Looking for model files in: {current_directory}")
     
     # Find all model files with the pattern used during training
-    model_files = find_model_files(current_directory, "SecondNewdata")
+    model_files = find_model_files(current_directory, "Second")
     
     if model_files:
         print(f"Found {len(model_files)} model files:")
@@ -164,10 +168,10 @@ if __name__ == "__main__":
         # You may need to modify the path and folder name based on your actual test data
         try:
             test_loader = DataLoader(
-                TestDataset("c:\\screenshots", "AUDI_TT_EVAL"),
-                  batch_size=1, 
+                Resnet18DL("c:\\screenshots", "AUDI_TT_EVAL",30),
+                  batch_size=8, 
                   shuffle=False,  
-                  num_workers=8,
+                  num_workers=1,
                   pin_memory=True,
                   persistent_workers=True,
                   prefetch_factor=2)

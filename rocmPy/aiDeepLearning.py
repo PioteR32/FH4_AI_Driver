@@ -130,7 +130,7 @@ if __name__ == "__main__":
             dataloader=train_loader,      # DataLoader zwracający ((x1, x2), y) lub ({'x1': x1, 'x2': x2}, y)
             criterion=criterion,
             optimizer=optimizer,
-            epochs=8,
+            epochs=12,
             device=device,
             
         )
