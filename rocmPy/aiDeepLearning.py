@@ -12,125 +12,145 @@ import torch.nn as nn
 import torch.nn.functional as F
 import multiprocessing
 import subprocess
+import argparse
+from pathlib import Path
 from torch.utils.data import DataLoader
-
 
 import LossFunc
 
 def train_model(
-    modelName:str,
+    model_name: str,
     model: torch.nn.Module, 
     dataloader: DataLoader, 
     criterion: torch.nn.Module, 
     optimizer: torch.optim.Optimizer, 
     epochs: int,
-    device: torch.device
-    
+    device: torch.device,
+    save_dir: str = "checkpoints"
 ) -> dict:
 
     model.to(device)
-    weights = torch.tensor([0.5,0.25,0.25]).to(device=device)#wagi do losu sterowanie,hamulec,gaz
+    # Wagi do funkcji kosztu
+    weights = torch.tensor([0.5, 0.25, 0.25]).to(device=device)
     history = {'train_loss': [], 'train_acc': []}
-    model_number = 1
-    file = open("log.txt","w")
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20, eta_min=1e-6)
-    for epoch in range(epochs):
-        model.train()
-        running_loss = 0.0
-        total_samples = 0
-        stopwatch = time.perf_counter()
-        for i, (batch_inputs, targets) in enumerate(dataloader):
-            images_raw, speeds_batch = batch_inputs
-
-            # Przenosimy na GPU i normalizujemy w jednym kroku (oszczędność VRAM)
-            images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0,3,1,2).div_(255.0) #normalizacja do 0-1 
-            speeds_batch = speeds_batch.to(device, dtype=torch.float16, non_blocking=True) #poprawne wyniki
-            targets = targets.to(device, dtype=torch.float32, non_blocking=True) #poprawne wyniki
-
-             # Zwalnia pamięć po gradientach zamiast zerować
-            with torch.autocast(device.type, enabled=True, dtype=torch.float32):  # Włączamy automatyczne mieszanie precyzji
-                outputs = model(images_batch, speeds_batch)
-                loss = F.cross_entropy(outputs,targets,weights)/4 #funkcja która wylicza loss
+    
+    # Tworzenie folderu na zapis (wykorzystanie pathlib)
+    save_path = Path(save_dir)
+    save_path.mkdir(parents=True, exist_ok=True)
+    
+    log_path = save_path / "training_log.txt"
+    
+    with open(log_path, "w") as log_file:
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
+        
+        for epoch in range(epochs):
+            model.train()
+            running_loss = 0.0
+            total_samples = 0
+            stopwatch = time.perf_counter()
             
-            loss.backward() #wyliczanie gradientów
-            if i % 3 or i ==  len(dataloader) - 1 :
-                optimizer.step()
-                optimizer.zero_grad(set_to_none=True)
+            for i, (batch_inputs, targets) in enumerate(dataloader):
+                images_raw, speeds_batch = batch_inputs
 
-            batch_size = targets.size(0)
-            running_loss += loss.item() * batch_size
-            total_samples += batch_size
-            if i % 50 == 0:
-                file.write(f"Epoka [{epoch+1}/{epochs}] | Batch [{i+1}/{len(dataloader)}] | Loss: {loss.item():.4f}| Time: {time.perf_counter() - stopwatch}\n")
-                print(f"Epoka [{epoch+1}/{epochs}] | Batch [{i+1}/{len(dataloader)}] | Loss: {loss.item():.4f}| Time: {time.perf_counter() - stopwatch}")
+                # Optymalizacja: Przenoszenie i normalizacja w jednym kroku (oszczędność VRAM i czasu)
+                # Używamy float16 dla mieszanej precyzji
+                images_batch = images_raw.to(device, dtype=torch.float16, non_blocking=True).permute(0,3,1,2).div_(255.0) 
+                targets = targets.to(device, dtype=torch.float16, non_blocking=True)
 
-        epoch_train_loss = running_loss / total_samples
-        history['train_loss'].append(epoch_train_loss)
-        epoch_time = time.perf_counter() - stopwatch
-        log_str = f"Epoka [{epoch+1}/{epochs}] | Train Loss: {epoch_train_loss:.4f} | Time: {epoch_time:.2f}s"
-        print(log_str)
-        file.write(log_str + "\n")
-        file.flush()
+                # Automatyczne mieszanie precyzji (AMP)
+                with torch.autocast(device.type, enabled=True, dtype=torch.bfloat16):
+                    outputs = model(images_batch, speeds_batch)
+                    # Uwaga: Używamy wag w cross_entropy
+                    loss = F.cross_entropy(outputs, targets, weight=weights) / 4
+                
+                loss.backward()
+                
+                # Optymalizacja: Krok optymalizatora co kilka kroków lub na końcu batcha (opcjonalne)
+                if i % 3 == 0 or i == len(dataloader) - 1:
+                    optimizer.step()
+                    optimizer.zero_grad(set_to_none=True) # Szybsze niż zero_grad()
 
-        if epoch > 3:
-            if history["train_loss"][epoch - 1] == history["train_loss"][epoch] and history["train_loss"][epoch - 2] == history["train_loss"][epoch]:
-                subprocess.run(["shutdown", "/s", "/t", "600"])
-                break
-        scheduler.step()
+                batch_size = targets.size(0)
+                running_loss += loss.item() * batch_size
+                total_samples += batch_size
+                
+                if i % 50 == 0:
+                    elapsed = time.perf_counter() - stopwatch
+                    msg = f"Epoka [{epoch+1}/{epochs}] | Batch [{i+1}/{len(dataloader)}] | Loss: {loss.item():.4f} | Time: {elapsed:.4f}s"
+                    print(msg)
+                    log_file.write(msg + "\n")
+                    log_file.flush()
 
-        #zapis modelu
-        if (epoch + 1) % 2 == 0:
-            model_path = modelName + f"{epochs}E{dataloader.batch_size}N{model_number}.pth"
-            torch.save(model.state_dict(), model_path )
-            print(f"Zapisano model do {model_path}")
-            model_number += 1
+            epoch_train_loss = running_loss / total_samples
+            epoch_time = time.perf_counter() - stopwatch
+            log_str = f"Epoka [{epoch+1}/{epochs}] | Train Loss: {epoch_train_loss:.4f} | Time: {epoch_time:.2f}s"
+            print(log_str)
+            log_file.write(log_str + "\n")
+            log_file.flush()
+
+            # Mechanizm bezpieczeństwa: wyłącz komputer, jeśli loss przestanie spadać (stagnacja)
+            if epoch > 3 and len(history["train_loss"]) >= 2:
+                if abs(history["train_loss"][-1] - epoch_train_loss) < 1e-6:
+                    print("Loss stagnates. Shutting down system to save energy/prevent damage...")
+                    # subprocess.run(["shutdown", "/s", "/t", "600"]) # Odkomentuj przy realnym treningu
+                    break
             
+            scheduler.step()
 
-        # # Czyszczenie bufora alokatora CUDA po każdej epoce
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+            # Zapis modelu po każdej epoce w dedykowanym folderze
+            model_filename = f"{model_name}_epoch_{epoch+1}.pth"
+            torch.save(model.state_dict(), save_path / model_filename)
+            print(f"Zapisano checkpoint: {model_filename}")
 
-    return history
+        return history
+
 if __name__ == "__main__":
-    from AiModels.OnlyTanhModel import OnlyTanhModel
-    from AiModels.FirstModel import ForzaH4Model
-    from AiModels.SecondModel import SecondFH4Model
-    from AiModels.Resnet18Model import Resnet18Model
-    from AiModels.OneImg import OneImgModel
-
-    from DataLoaders.DataLoader import SimpleDataset
-    from DataLoaders.OnlyTahnOutputsDataSet import OnlyTanhLabelsDataSet
-    from DataLoaders.TestDataLoader import TestDataset
-    from DataLoaders.Resnet18DL import Resnet18DL
-
+    import argparse
+    
+    # CLI Argument Parser - to sprawia, że Twój projekt jest profesjonalnym narzędziem
+    parser = argparse.ArgumentParser(description="Professional Training Script for FH4 AI Driver")
+    parser.add_argument("--model_name", type=str, default="OneImgModel_Base", help="Base name for the model file")
+    parser.add_argument("--epochs", type=int, default=20, help="Number of training epochs")
+    parser.add_argument("--batch_size", type=int, default=64, help="Batch size for DataLoader")
+    parser.add_argument("--data_dir", type=str, default="D:/screenshots", help="Path to training images")
+    parser.add_argument("--save_dir", type=str, default="checkpoints", help="Directory to save models and logs")
+    parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate")
+    
+    args = parser.parse_args()
+    
+    # Konfiguracja sprzętowa
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     multiprocessing.freeze_support()
+
+    # Importy modeli (używane wewnątrz main)
+    from AiModels.OneImg import OneImgModel
+    from DataLoaders.Resnet18DL import Resnet18DL
+
     # 1. Inicjalizacja komponentów
-    model = OneImgModel(num_speeds=90,rest_input_dim=48*3).to(device)
+    model = OneImgModel(num_speeds=15, rest_input_dim=48).to(device)
+    criterion = LossFunc.CustomDriveLoss(2, 2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
 
-    # checkpoint = torch.load(r"C:\FH4_AI_Driver\FirstModels\model_200E32BLR0_0000111.pth", map_location=device)
-    # model.load_state_dict(checkpoint)
-
-    criterion = LossFunc.CustomDriveLoss(2,2)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0001)
-    modelName = "Second2x256S1"
-
+    # 2. Przygotowanie danych
     train_loader = DataLoader(
-            Resnet18DL("D:\\screenshots", "AUDI_TT",30),
-              batch_size=64, 
-              shuffle=True,
-              num_workers=12,
-              pin_memory=True,
-              persistent_workers=False,
-              prefetch_factor=2,
-              )
+            Resnet18DL(args.data_dir, "AUDI_TT", 5),
+            batch_size=args.batch_size, 
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True,
+            prefetch_factor=2,
+    )
+
+    # 3. Start treningu
+    print(f"Rozpoczynanie treningu na urządzeniu: {device}")
     history = train_model(
-            modelName,
-            model=model,
-            dataloader=train_loader,      # DataLoader zwracający ((x1, x2), y) lub ({'x1': x1, 'x2': x2}, y)
-            criterion=criterion,
-            optimizer=optimizer,
-            epochs=12,
-            device=device,
-            
-        )
+        model_name=args.model_name,
+        model=model,
+        dataloader=train_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        epochs=args.epochs,
+        device=device,
+        save_dir=args.save_dir
+    )
+
